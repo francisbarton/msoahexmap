@@ -8,6 +8,7 @@
   library(sf)
   library(tmap)
   library(wesanderson)
+  library(ggsci)
 }
 
 
@@ -22,13 +23,18 @@ tmap_options()
 
 
 sussex_lads <- c("Brighton and Hove", "East Sussex", "West Sussex") %>%
-  purrr::map_df(~ jogger::geo_get("lad", ., "utla", return_style = "simple", spatial_ref = 27700))
+  purrr::map_df(~ jogger::geo_get("lad", ., "utla", return_style = "simple", spatial_ref = 27700)) %>%
+  sf::st_as_sf() # shouldn't need this - possibly a (now fixed) jogger bug
+
+save_it(sussex_lads)
 
 sussex_bounds <- sussex_lads %>%
   dplyr::pull(2) %>%
-  purrr::map_df(~ geo_get("msoa", ., "lad", spatial_ref = 7405, shape_fields = TRUE)) %>%
-  dplyr::relocate(msoa11hclnm, .after = msoa11nm) %>%
-  dplyr::left_join(sussex_lads, by = c("lad20cd" = "ltla20cd", "lad20nm" = "ltla20nm"))
+  purrr::map(~ geo_get("msoa", ., "lad", spatial_ref = 27700, shape_fields = TRUE)) %>%
+  purrr::reduce(bind_rows) %>%
+  dplyr::left_join(., sf::st_drop_geometry(sussex_lads), by = c("lad20cd" = "ltla20cd", "lad20nm" = "ltla20nm")) %>%
+  dplyr::relocate(c(shape_area, shape_length, geometry), .after = last_col()) %>%
+  sf::st_as_sf()
   # # not needed now - was previous way of sorting areas by smallest MSOA area
   # %>%
   # order_along(lad20cd, shape_area)
@@ -47,21 +53,22 @@ tmap_save(sussex1, "sussex1.png")
 # #### sussex_centroids <- st_centroid(sussex_bounds)
 # instead of geometric centroids (above), use ONS population-weighted centroids
 sussex_centroids <- sussex_bounds %>%
-  dplyr::pull(msoa11cd) %>%
-  jogger::geo_get_bounds("msoa11cd", ., spatial_ref = 27700, return_centroids = TRUE) %>%
-  dplyr::left_join(sf::st_drop_geometry(sussex_bounds))
+  dplyr::select(starts_with(c("msoa", "lad"))) %>%
+  dplyr::mutate(geometry = jogger::geo_get_bounds("msoa11cd", msoa11cd, spatial_ref = 27700, return_centroids = TRUE))
 
+save_it(sussex_centroids)
 
 # sort each lad group by proximity to combined lad geo centroid
 
 sussex_lads_split <- sussex_bounds %>%
   split(forcats::fct_inorder(.$lad20nm))
 sussex_centroids_split <- sussex_centroids %>%
-  split(forcats::fct_inorder(.$lad20nm))
+  split(forcats::fct_relevel(forcats::fct_inorder(.$lad20nm), names(sussex_lads_split)))
 
 sussex_lad_centroids <- sussex_lads_split %>%
   purrr::map(sf::st_union) %>%
   purrr::map(sf::st_centroid)
+  # purrr::map(sf::st_as_sf)
 
 
 # make a map why not -------------------------
@@ -73,8 +80,7 @@ grid <- st_make_grid(
   flat_topped = TRUE,
   cellsize = 3750
 ) %>%
-  sf::st_sfc(crs = 7405) %>%
-  sf::st_as_sf()
+  sf::st_sfc(crs = 27700)
 
 grid_centroids <- st_centroid(grid)
 
@@ -141,7 +147,7 @@ tmap_save(sussex5, "sussex5.png")
 
 
 # Arrange the list of MSOAs in each LAD according to how close their centroid
-# is to the LAd's centroid. The intention here is to try to centre to some
+# is to the LAD's centroid. The intention here is to try to centre to some
 # extent each cluster of MSOAs more faithfully over the extent of its LAD
 
 sussex_lads_by_centroid_proximity <- sussex_centroids_split %>%
@@ -163,8 +169,12 @@ sussex_lads_by_centroid_proximity <- sussex_lads_split %>%
   pull(lad20nm) %>%
   `[`(sussex_lads_by_centroid_proximity, .)
 
-
-
+# order LADs by fewest MSOAs only
+# sussex_lads_by_centroid_proximity2 <- sussex_lads_split %>%
+#   map_int(nrow) %>%
+#   sort() %>%
+#   names() %>%
+#   `[`(sussex_lads_by_centroid_proximity, .)
 
 
 
@@ -187,8 +197,7 @@ choose_grid <- function(area_bounds, msoas_list, cell_size) {
     # n = grid_dims
     cellsize = cell_size
   ) %>%
-    sf::st_sfc(crs = 7405) %>%
-    sf::st_as_sf()
+    sf::st_sfc(crs = 27700)
 
   # results <- areas_df %>%
     # split(forcats::fct_inorder(.$lad20nm)) %>%
@@ -197,7 +206,7 @@ choose_grid <- function(area_bounds, msoas_list, cell_size) {
       # gather_hexes,
       # hex_array,
       hex_array2,
-      .init = list(NULL, grid, NULL)
+      .init = list(NULL, grid)
     )
 
   hexes <- results %>%
@@ -223,16 +232,38 @@ hex_array2 <- function(input, msoas_sf, first_pass = TRUE) {
 
   msoa <- msoas_sf %>%
     dplyr::slice(1)
-  msoa_centroid <- sussex_centroids %>%
-    dplyr::filter(msoa11cd == msoa$msoa11cd)
+  # msoa_centroid <- sussex_centroids %>%
+  #   dplyr::filter(msoa11cd == msoa$msoa11cd)
   msoas_out <- msoas_sf %>%
     dplyr::slice(-1)
 
 
-  grid_centroids <- sf::st_centroid(grid)
-  nearest_index <- sf::st_nearest_feature(msoa_centroid, grid_centroids)
-  nearest_hex <- dplyr::slice(grid, nearest_index)
-  grid_out <- dplyr::slice(grid, -nearest_index)
+
+
+  if (!is.null(results) && any(
+      sf::st_touches(
+        x = results,
+        y = grid,
+        sparse = FALSE)[1, ]
+      # sf::st_touches(x = grid, y = results, sparse = FALSE)[, 1]
+    )) {
+      filter_grid <- grid %>%
+        `[`(which(sf::st_touches(x = results, y = grid, sparse = FALSE)[1, ]))
+      remainder <- grid %>%
+        `[`(which(!sf::st_touches(x = results, y = grid, sparse = FALSE)[1, ]))
+
+      grid_centroids <- sf::st_centroid(filter_grid)
+      nearest_index <- sf::st_nearest_feature(msoa, grid_centroids)
+      nearest_hex <- `[`(filter_grid, nearest_index)
+      filter_grid <- `[`(filter_grid, -nearest_index)
+      grid_out <- c(filter_grid, remainder)
+    } else {
+      grid_centroids <- sf::st_centroid(grid)
+      nearest_index <- sf::st_nearest_feature(msoa, grid_centroids)
+      nearest_hex <- `[`(grid, nearest_index)
+      grid_out <- `[`(grid, -nearest_index)
+  }
+
 
 
 
@@ -250,19 +281,6 @@ hex_array2 <- function(input, msoas_sf, first_pass = TRUE) {
 
 
 }
-
-out <- choose_grid(sussex_bounds, sussex_lads_by_centroid_proximity, cell_size = 3750)
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -388,21 +406,15 @@ gather_hexes <- function(input, areas_df, n = NULL) {
 
 
 
-my_pal <- wesanderson::wes_palette(
-  name = "FantasticFox1",
-  n = 13,
-  type = "continuous"
-)
-
 my_pal <- ggsci::pal_futurama()
 
 my_pal <- ggsci::pal_d3("category20")
 
 tmap_design_mode()
 
+out <- choose_grid(sussex_bounds, sussex_lads_by_centroid_proximity, cell_size = 4000)
 
-
-sussex_hexmap27 <- tm_shape(out[[1]]) +
+sussex_hexmap <- tm_shape(out[[1]]) +
   tm_borders("olivedrab4", lwd = 1, alpha = 0.1) +
   tm_fill("grey65", alpha = 0.3) +
   tm_shape(sf::st_union(sussex_bounds)) +
@@ -421,28 +433,22 @@ sussex_hexmap27 <- tm_shape(out[[1]]) +
              )
   ) +
   tm_borders() +
-  tm_fill("lad20nm", alpha = 0.7, palette = my_pal(13)) +
+  tm_fill("lad20nm", alpha = 0.7, palette = my_pal(12)) +
   tm_text("label", size = 0.6) +
   # tm_text("msoa11no", size = 0.5) +
   # tm_shape(out[[3]]) +
   # tm_borders("grey20", lwd = 2) +
-  tm_layout(title = "MSOAs in Sussex\ncell size = 3750",
-            legend.show = FALSE)
+  tm_layout(title = paste0(
+    "MSOAs in Sussex"
+    , nrow(out[[2]])
+    , "\n"
+    , "Cells (hexagons): "
+    , nrow(out[[1]])
+    , "Cell size = 4000m\n"
+    )
+    , legend.show = FALSE)
 
 
-
-sussex_hexmap27
-tmap_save(sussex_hexmap25, "sussex_hexmap25.png")
-
-
-tmap_save(sussex_hexmap1, "sussex_hexmap1.png")
-tmap_save(sussex_hexmap2, "sussex_hexmap2.png")
-tmap_save(sussex_hexmap3, "sussex_hexmap3.png")
-tmap_save(sussex_hexmap4, "sussex_hexmap4.png")
-tmap_save(sussex_hexmap5, "sussex_hexmap5.png")
-tmap_save(sussex_hexmap7, "sussex_hexmap7.png")
-tmap_save(sussex_hexmap8, "sussex_hexmap8.png")
-tmap_save(sussex_hexmap9, "sussex_hexmap9.png")
 
 sussex_bounds %>%
   dplyr::mutate(msoa11hclnm = stringr::str_extract(msoa11hclnm, "^.{5}")) %>%
