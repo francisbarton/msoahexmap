@@ -49,7 +49,7 @@ tmap_save(essex1, "essex1.png")
 # use ONS population-weighted centroids:
 essex_centroids <- jogger::geo_get("msoa", "Essex", "cty", return_centroids = TRUE, return_style = "minimal", spatial_ref = 27700)
 
-# the above doesn't include LAD columns so use a join to add these in:
+# the above doesn't include LAD columns, so use a join to add these in:
 essex_centroids <- essex_bounds %>%
   sf::st_drop_geometry() %>%
   dplyr::select(starts_with(c("msoa", "lad"))) %>%
@@ -63,6 +63,7 @@ save_it(essex_centroids)
 essex_centroids_split <- essex_centroids %>%
   split( ~ lad20nm) # R 4.1.0 style!
 
+# Calculate the spatial centre of each LAD
 essex_lad_centroids <- essex_lads %>%
   split( ~ lad20nm) %>%
   purrr::map(sf::st_centroid)
@@ -179,14 +180,10 @@ essex_lads_by_density <- essex_bounds %>%
 
 
 
-# using the functions below to generate grids and hex collections more smoothly
-
 
 my_pal <- ggsci::pal_futurama()
 my_pal <- ggsci::pal_d3("category20")
 
-# tmap_design_mode()
-essex_hexgrid <- create_hexgrid(essex_bounds, essex_lads_by_density, 4333)
 essex_hexmap <- create_hexmap(essex_bounds, essex_lads_by_density, 4333)
 essex_hexmap
 
