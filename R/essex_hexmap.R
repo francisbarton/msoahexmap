@@ -49,6 +49,7 @@ tmap_save(essex1, "essex1.png")
 # use ONS population-weighted centroids:
 essex_centroids <- jogger::geo_get("msoa", "Essex", "cty", return_centroids = TRUE, return_style = "minimal", spatial_ref = 27700)
 
+# the above doesn't include LAD columns so use a join to add these in:
 essex_centroids <- essex_bounds %>%
   sf::st_drop_geometry() %>%
   dplyr::select(starts_with(c("msoa", "lad"))) %>%
@@ -57,22 +58,10 @@ save_it(essex_centroids)
 
 # essex_centroids <- readRDS(here::here("rds_data", "essex_centroids.Rds"))
 
-# Create a list of MSOAs (with actual MSOA boundaries) for each LAD (n = 12)
-# no longer needed????
-# essex_lads_split <- essex_bounds %>%
-#   split(forcats::fct_inorder(.$lad20nm))
-# R 4.1.0 style:
-# essex_lads_split <- essex_bounds %>%
-#   split( ~ lad20nm)
 
 # Create a list of MSOAs (with centroid geometry) for each LAD
 essex_centroids_split <- essex_centroids %>%
-  split( ~ lad20nm)
-
-# more complex way I used previously to ensure that the order was the same
-# for the split list of LADs and the split list of centroids:
-# essex_centroids_split <- essex_centroids %>%
-#   split(forcats::fct_relevel(forcats::fct_inorder(.$lad20nm), names(essex_lads_split)))
+  split( ~ lad20nm) # R 4.1.0 style!
 
 essex_lad_centroids <- essex_lads %>%
   split( ~ lad20nm) %>%
@@ -131,7 +120,6 @@ essex_grid3
 tmap_save(essex_grid3, "essex_grid3.png")
 
 
-# ---
 
 
 
@@ -168,8 +156,6 @@ sort_by_init_proximity <- function(dtf) {
   dplyr::bind_cols(dtf, top_proximity = dists) %>%
     dplyr::arrange(top_proximity)
 
-  # dtf3 <- dplyr::arrange(dtf, top_proximity = sf::st_distance(top))
-
 }
 
 
@@ -200,13 +186,12 @@ my_pal <- ggsci::pal_futurama()
 my_pal <- ggsci::pal_d3("category20")
 
 # tmap_design_mode()
-essex_hexmap <- create_hexmap(essex_bounds, essex_lads_by_density, 4500)
+essex_hexgrid <- create_hexgrid(essex_bounds, essex_lads_by_density, 4333)
+essex_hexmap <- create_hexmap(essex_bounds, essex_lads_by_density, 4333)
 essex_hexmap
 
-tmap_save(essex_hexmap, "essex_hexmap_4500b.png")
+tmap_save(essex_hexmap, "essex_hexmap_4333.tiff")
 
-
-# —————————————————————————————————————————————————————————————————————————
 
 
 
@@ -218,13 +203,11 @@ tmap_save(essex_hexmap, "essex_hexmap_4500b.png")
 
 create_hexmap <- function(msoa_bounds, lads_list, cell_size) {
 
-  grid_fill <- create_grid(msoa_bounds, lads_list, cell_size)
+  grid_fill <- create_hexgrid(msoa_bounds, lads_list, cell_size)
 
   tm_shape(grid_fill[[1]]) + # base grid
     tm_borders("olivedrab4", lwd = 1, alpha = 0.1) +
     tm_fill("grey65", alpha = 0.3) +
-    tm_shape(sf::st_union(msoa_bounds)) + # county boundary
-    tm_borders("grey45") +
     tm_shape(grid_fill[[2]] %>% # MSOA hexes
                dplyr::mutate(
                  label = toupper(
@@ -241,26 +224,27 @@ create_hexmap <- function(msoa_bounds, lads_list, cell_size) {
     tm_borders() +
     tm_fill("lad20nm", alpha = 0.7, palette = my_pal(12)) +
     tm_text("label", size = 0.5) +
+    tm_shape(sf::st_union(msoa_bounds)) + # county boundary
+    tm_borders("gold1", lwd = 2) +
     tm_layout(title = paste0(
-      "MSOAs in Essex: "
-      , nrow(grid_fill[[2]])
-      , "\n"
-      , "Grid cells: "
-      , length(grid_fill[[1]])
-      , "\n"
-      , "Cell size = "
+      "Cell size = "
       , cell_size
-      , "m"
+      , "m\nMSOAs in Essex: "
+      , nrow(grid_fill[[2]])
+      , "\nGrid cells: "
+      , length(grid_fill[[1]])
+      , "\nUsage: "
+      , round(nrow(grid_fill[[2]])*100/length(grid_fill[[1]]))
+      , "%"
     )
     , legend.show = FALSE)
 
 }
 
-# create_grid: create hex blocks for each lad -----------------------------
+# create_hexgrid: create hex blocks for each lad -----------------------------
 
 
-# create_hexmap(essex_bounds, essex_lads_by_density, 4000)
-create_grid <- function(area_bounds, msoas_list, cell_size) {
+create_hexgrid <- function(area_bounds, msoas_list, cell_size) {
 
   # make a grid of the whole area, given cell_size as a variable
   grid <- sf::st_make_grid(
@@ -283,70 +267,24 @@ create_grid <- function(area_bounds, msoas_list, cell_size) {
     ) %>%
     purrr::pluck(1)
 
-  # output a list of the original grid and the hexes so far, to be used for
-  # next run of the function
+  # return:
   list(grid, hexes)
 }
 
 
 
-# hex_array: the guts of create_grid --------------------------------------
-
-essex_grid <- sf::st_make_grid(
-  essex_lads,
-  what = "polygons",
-  square = FALSE,
-  flat_topped = TRUE,
-  cellsize = 3750
-) %>%
-  sf::st_sfc(crs = 27700)
-
-test_out <- hex_array(list(test_out, essex_grid), essex_lads_by_density[["Harlow"]], first_pass = FALSE)
-
-
-tm_shape(essex_grid) + # base grid
-  tm_borders("olivedrab4", lwd = 1, alpha = 0.1) +
-  tm_fill("grey65", alpha = 0.3) +
-  tm_shape(sf::st_union(essex_lads)) + # county boundary
-  tm_borders("grey45") +
-  tm_shape(test_out[[1]] %>%         # MSOA hexes
-             dplyr::mutate(
-               label = toupper(
-                 paste0(
-                   stringr::str_extract(lad20nm, "^.{2,4}"),
-                   ".\n",
-                   stringr::str_extract(msoa11hclnm, "^.{2,5}"),
-                   "\n",
-                   stringr::str_extract(msoa11nm, "[0-9]{3}$")
-                 )
-               )
-             )
-  ) +
-  tm_borders() +
-  tm_text("label", size = 0.5) +
-  tm_shape(test_out[[1]]) +
-  tm_borders("red") +
-  tm_shape(sf::st_centroid(test_out[[2]])) +
-  tm_dots("purple", size = 0.1)
-
+# hex_array: the guts of create_hexgrid --------------------------------------
 
 
 hex_array <- function(data_inputs, msoas_list, first_pass = TRUE) {
 
   # split out data_inputs (data to work with) as the basis for the function
-  # results <- data_inputs[[1]] # list(*results*, grid_out, prev_results)
-  grid <- data_inputs[[2]]    # list(results, *grid_out*, prev_results)
-
-  if (first_pass) {   # if this is the first loop through for this LAD
-    # store all previous results safely!
-    prev_results <- data_inputs[[1]]
-  } else {
-    prev_results <- data_inputs[[3]] # list(results, grid_out, *prev_results*)
-  }
+  prev_results <- data_inputs[[1]]
+  grid <- data_inputs[[2]]
 
   lad_hexes <- msoas_list %>%
     split( ~ msoa11cd) %>%
-    purrr::reduce(find_hexes, .init = list(NULL, grid))
+    purrr::reduce(collect_hexes, .init = list(NULL, grid))
 
   # add results to stored previous results
   results <- dplyr::bind_rows(prev_results, lad_hexes[[1]])
@@ -358,10 +296,10 @@ hex_array <- function(data_inputs, msoas_list, first_pass = TRUE) {
 
 
 # find_hexes: engine func of hex_array ------------------------------------
-# (refactored out for clarity)
+# (refactored out, for clarity)
 
 
-find_hexes <- function(data_inputs, msoa) {
+collect_hexes <- function(data_inputs, msoa) {
 
   # split out data_inputs (data to work with) as the basis for the function
   results <- data_inputs[[1]]
@@ -386,7 +324,7 @@ find_hexes <- function(data_inputs, msoa) {
     nearest_index <- sf::st_nearest_feature(msoa, touching_centroids)
     nearest_hex <- sf::st_set_geometry(msoa, `[`(touching_grid, nearest_index))
 
-    # if we haven't yet got any results, or there's no touching hexes left:
+    # if this is the first loop, or there's no touching hexes available:
   } else {
     grid_centroids <- sf::st_centroid(grid)
     nearest_index <- sf::st_nearest_feature(msoa, grid_centroids)
@@ -394,11 +332,8 @@ find_hexes <- function(data_inputs, msoa) {
   }
 
 
-  # add the recently calculated hex to "results"
-  results <- dplyr::bind_rows(
-    results,
-    nearest_hex
-  )
+  # add the chosen hex to "results"
+  results <- dplyr::bind_rows(results, nearest_hex)
 
   # and subtract it from the grid
   grid_out <- sf::st_difference(grid, nearest_hex)
