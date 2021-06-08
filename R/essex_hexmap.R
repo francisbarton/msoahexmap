@@ -16,7 +16,9 @@
 
 tmap_mode("plot")
 
-tmap_options(fontfamily = "Source Sans Pro")
+tmap_options(fontfamily = "Source Sans Pro",
+             output.format = "tiff",
+             output.size = 70)
 
 
 # get some data to start from ---------------------------------------------
@@ -147,15 +149,32 @@ essex_lads_by_centroid_proximity <- essex_centroids_split %>%
   purrr::map(as.vector) %>%
 
   # join these vectors back to the source dfs...
-  purrr::map2(., essex_centroids_split, ~ dplyr::bind_cols(.y, proximity = .x)) %>%
+  purrr::map2(., essex_centroids_split, ~ dplyr::bind_cols(.y, lad_ctr_proximity = .x)) %>%
 
   # and then sort each df by proximity of the MSOAs
-  purrr::map(~ arrange(., proximity))
+  purrr::map(~ arrange(., lad_ctr_proximity))
 
-# TODO This is all very well but ideally we should have the MSOA closest to the
-# LAD centroid at the top, as here, but then the rest of the MSOAs listed in
-# order of closeness to the *top MSOA*, not in order of proximity to the
-# LAD centroid. This should help keep adjacent MSOAs together.
+
+
+sort_by_init_proximity <- function(dtf) {
+
+  top <- dplyr::slice(dtf, 1)
+
+  dists <- dtf %>%
+    split( ~ msoa11cd) %>%
+    purrr::map_dbl( ~ sf::st_distance(., top)) %>%
+    as.vector()
+
+  dplyr::bind_cols(dtf, top_proximity = dists) %>%
+    dplyr::arrange(top_proximity)
+
+  # dtf3 <- dplyr::arrange(dtf, top_proximity = sf::st_distance(top))
+
+}
+
+
+essex_msoas_by_proximity <- essex_lads_by_centroid_proximity %>%
+  purrr::map(sort_by_init_proximity)
 
 
 
@@ -170,7 +189,7 @@ essex_lads_by_density <- essex_bounds %>%
   arrange(density) %>%
   pull(lad20nm) %>%
   # and then re-order this list accordingly
-  `[`(essex_lads_by_centroid_proximity, .)
+  `[`(essex_msoas_by_proximity, .)
 
 
 
@@ -184,7 +203,7 @@ my_pal <- ggsci::pal_d3("category20")
 essex_hexmap <- create_hexmap(essex_bounds, essex_lads_by_density, 4500)
 essex_hexmap
 
-tmap_save(essex_hexmap, "essex_hexmap_4500.png")
+tmap_save(essex_hexmap, "essex_hexmap_4500b.png")
 
 
 # —————————————————————————————————————————————————————————————————————————
@@ -226,7 +245,7 @@ create_hexmap <- function(msoa_bounds, lads_list, cell_size) {
       "MSOAs in Essex: "
       , nrow(grid_fill[[2]])
       , "\n"
-      , "Cells (hexagons): "
+      , "Grid cells: "
       , length(grid_fill[[1]])
       , "\n"
       , "Cell size = "
@@ -388,263 +407,3 @@ find_hexes <- function(data_inputs, msoa) {
   list(results, grid_out)
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## previous version: still not quite working
-
-# hex_array <- function(input_list, msoas_sf, first_pass = TRUE) {
-#
-#
-#   # split out input_list (data to work with) as the basis for the function
-#   results <- input_list[[1]] # list(*results*, grid_out, prev_results)
-#   grid <- input_list[[2]]    # list(results, *grid_out*, prev_results)
-#
-#   if (first_pass) {
-#     prev_results <- results
-#     results <- NULL
-#   } else {
-#     prev_results <- input_list[[3]] # list(results, grid_out, *prev_results*)
-#   }
-#
-#
-#   # take the list of MSOAs and slice off the first item; pass on the remainder
-#   msoa <- msoas_sf %>%
-#     dplyr::slice(1)
-#   msoas_out <- msoas_sf %>%
-#     dplyr::slice(-1)
-#
-#
-#
-#   # if we have any "results" produced already...
-#   if (!is.null(results) && any(
-#     sf::st_touches(
-#       x = sf::st_combine(results),
-#       y = grid,
-#       sparse = FALSE)[1, ]
-#   )) {
-#
-#     # pull out a group of hexes from "grid" that touch "results"...
-#     # (discovered that I need to use st_combine to make this work as intended)
-#     filter_grid <- grid %>%
-#       `[`(which(sf::st_touches(x = sf::st_combine(results), y = grid, sparse = FALSE)[1, ]))
-#     # ...and save the rest of the "grid" for later
-#     remainder <- grid %>%
-#       `[`(which(!sf::st_touches(x = sf::st_combine(results), y = grid, sparse = FALSE)[1, ])) %>%
-#       # need to subtract the already "taken" hexes (results) too!
-#       sf::st_difference(sf::st_combine(results))
-#
-#     # just get the centroids of the touching part of the grid
-#     grid_centroids <- sf::st_centroid(filter_grid)
-#
-#     # which is the nearest centroid to the MSOA we're dealing with?
-#     nearest_index <- sf::st_nearest_feature(msoa, grid_centroids)
-#     nearest_hex <- `[`(filter_grid, nearest_index)
-#
-#     # update filter_grid to remove the hex we just selected...
-#     filter_grid <- `[`(filter_grid, -nearest_index)
-#
-#     # ...and make a new grid to pass to the next cycle
-#     grid_out <- c(filter_grid, remainder)
-#
-#   # if we haven't yet got any results, do this first:
-#   } else {
-#     grid_centroids <- sf::st_centroid(grid)
-#     nearest_index <- sf::st_nearest_feature(msoa, grid_centroids)
-#     nearest_hex <- `[`(grid, nearest_index)
-#     grid_out <- `[`(grid, -nearest_index)
-#   }
-#
-#
-#
-#   # add the recently calculated hex to "results"
-#   results <- dplyr::bind_rows(
-#     results,
-#     sf::st_set_geometry(msoa, nearest_hex)
-#   )
-#
-#   # once the last MSOA in the LAD has been calculated export the results
-#   # and the remaining grid...
-#   if (nrow(msoas_out) == 0) {
-#     results <- dplyr::bind_rows(prev_results, results)
-#     list(results, grid_out)
-#   } else {
-#
-#   # otherwise send the intermediate products back through the cycle
-#     hex_array2(list(results, grid_out, prev_results), msoas_out, first_pass = FALSE)
-#   }
-#
-#
-# }
-
-
-
-
-# older function - kept just in case :-/
-
-# hex_array <- function(input, areas_df, first_pass = TRUE) {
-#
-#   results <- input[[1]]
-#   grid <- input[[2]]
-#   prev_results <- input[[3]]
-#
-#   if (first_pass) {
-#     prev_results <- results
-#     results <- NULL
-#   }
-#
-#   msoa <- areas_df %>%
-#     dplyr::slice(1)
-#   msoa_centroid <- sf::st_centroid(msoa)
-#   areas_out <- areas_df %>%
-#     dplyr::slice(-1)
-#   # area_centroids <- sf::st_centroid(areas_out)
-#
-#
-#   grid_centroids <- sf::st_centroid(grid)
-#   nearest_index <- sf::st_nearest_feature(msoa_centroid, grid_centroids)
-#   nearest_hex <- dplyr::slice(grid, nearest_index)
-#   grid <- dplyr::slice(grid, -nearest_index)
-#
-#
-#
-#   results <- dplyr::bind_rows(
-#     results,
-#     dplyr::bind_cols(
-#       sf::st_drop_geometry(msoa),
-#       hex_geometry = nearest_hex
-#     )
-#   )
-#
-#   if (nrow(areas_out) == 0) {
-#     results <- dplyr::bind_rows(prev_results, sf::st_sf(results))
-#     list(results, grid, NULL)
-#   } else {
-#     hex_array(list(results, grid, prev_results), areas_out, first_pass = FALSE)
-#   }
-#
-#
-# }
-
-
-
-# gather_hexes: alternative function to the above?
-#
-# this was a previous function, replaced by hex_array (which uses the "sorted
-# by proximity" set up of msoas_df just to slice off MSOAs one by one, rather
-# than using the next_index / n system here)
-
-
-# gather_hexes <- function(input, areas_df, n = NULL) {
-#
-#   # previous results of function, if any (hexes and remaining grid)
-#   results <- input[[1]]
-#   grid <- input[[2]]
-#
-#   # centroids for all MSOAs
-#   area_centroids <- sf::st_centroid(areas_df)
-#
-#   # not sure need this bit (check)
-#   if (is.null(n)) {
-#
-#     # which MSOA centroid is nearest to the LAD centroid?
-#     n <- sf::st_nearest_feature(
-#       sf::st_centroid(sf::st_union(areas_df)),
-#       area_centroids
-#     )
-#
-#   }
-#
-#
-#
-#   # select nearest remaining MSOA
-#   msoa <- areas_df %>%
-#     dplyr::slice(n)
-#
-#   # hmmm but we already have popn-weighted centroids so why this?
-#   msoa_centroid <- sf::st_centroid(msoa)
-#
-#   areas_out <- areas_df %>%
-#     dplyr::slice(-n)
-#   # need to regenerate list of centroids?
-#   area_centroids <- sf::st_centroid(areas_out)
-#
-#
-#
-#   if (!is.null(results) && any(sf::st_touches(x = grid, y = results, sparse = FALSE)[, 1])) {
-#
-#     # filter out hexes that are touching results...
-#     filter_grid <- grid %>%
-#       dplyr::filter(sf::st_touches(x = ., y = results, sparse = FALSE)[, 1])
-#     # ...and save the remainder
-#     remainder <- grid %>%
-#       dplyr::filter(!sf::st_touches(x = ., y = results, sparse = FALSE)[, 1])
-#
-#
-#     grid_centroids <- sf::st_centroid(filter_grid)
-#     nearest_index <- sf::st_nearest_feature(msoa_centroid, grid_centroids)
-#     nearest_hex <- dplyr::slice(filter_grid, nearest_index)
-#     filter_grid <- dplyr::slice(filter_grid, -nearest_index)
-#     grid <- dplyr::bind_rows(filter_grid, remainder)
-#   } else {
-#     grid_centroids <- sf::st_centroid(grid)
-#     nearest_index <- sf::st_nearest_feature(msoa_centroid, grid_centroids)
-#     nearest_hex <- dplyr::slice(grid, nearest_index)
-#     grid <- dplyr::slice(grid, -nearest_index)
-#
-#   }
-#
-#
-#   # generate new set of results to pass on
-#   results <- dplyr::bind_rows(
-#     results,
-#     dplyr::bind_cols(
-#       sf::st_drop_geometry(msoa),
-#       hex_geometry = nearest_hex
-#     )
-#   ) %>%
-#     sf::st_sf()
-#
-#
-#
-#   # calculate the index to be passed to next cycle as "n" - but is this
-#   # right? why am I using msoa-centroid, when this is the one we've just done?
-#   next_area_index <- sf::st_nearest_feature(msoa_centroid, area_centroids)
-#
-#
-#
-#   # finish when have gone through all MSOAs...
-#   if (nrow(areas_out) == 0) {
-#     list(results, grid)
-#   } else {
-#   # ...or send the output data through the cycle again
-#     gather_hexes(input = list(results, grid), areas_df = areas_out, n = next_area_index)
-#   }
-# }
-
