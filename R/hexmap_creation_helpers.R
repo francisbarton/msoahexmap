@@ -1,6 +1,13 @@
-# create_hexgrid: create hex blocks for each lad -----------------------------
-
-
+#' Create hexgrid
+#'
+#' Combines grid creation function and hexgrid creation
+#'
+#' @param area_bounds an sf object (eg sfc collection) that provides the overall shape
+#' @param msoas_list grouped and sorted list of MSOAs by LAD area or whatever
+#' @param cell_size size of grid cells in m
+#'
+#' @return a list with two elements: a grid and a hexgrid
+#' @export
 create_hexgrid <- function(area_bounds, msoas_list, cell_size) {
 
   # make a grid of the whole area, given cell_size as a variable
@@ -29,10 +36,13 @@ create_hexgrid <- function(area_bounds, msoas_list, cell_size) {
 
 
 
-# hex_array: the guts of create_hexgrid --------------------------------------
-
-
-hex_array <- function(data_inputs, msoas_list, first_pass = TRUE) {
+#' Hex array: the guts of create_hexgrid()
+#'
+#' @param data_inputs a list created by previous run: previous results and a grid
+#' @param msoas_list grouped and sorted list of MSOAs by LAD area or whatever
+#'
+#' @return a list: current results and a grid
+hex_array <- function(data_inputs, msoas_list) {
 
   # split out data_inputs (data to work with) as the basis for the function
   prev_results <- data_inputs[[1]]
@@ -51,10 +61,12 @@ hex_array <- function(data_inputs, msoas_list, first_pass = TRUE) {
 }
 
 
-# find_hexes: engine func of hex_array ------------------------------------
-# (refactored out, for clarity)
-
-
+#' Collect hexes
+#'
+#' @param data_inputs a list created by previous run: previous results and a grid
+#' @param msoa a particular MSOA whose hex location is to be calculated
+#'
+#' @return a list: current results and currently remaining grid
 collect_hexes <- function(data_inputs, msoa) {
 
   # split out data_inputs (data to work with) as the basis for the function

@@ -4,3 +4,5 @@
 .Ruserdata
 rds_data
 *.png
+*.tiff
+*.csv

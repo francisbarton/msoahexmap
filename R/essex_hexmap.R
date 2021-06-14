@@ -4,13 +4,13 @@
   library(here)
   library(dplyr)
   library(extrafont)
-  library(jogger)
-  library(myrmidon)
+  library(ggsci)
+  library(jogger)   # remotes::install_github("francisbarton/jogger")
+  library(myrmidon) # remotes::install_github("francisbarton/myrmidon")
   library(purrr)
   library(sf)
   library(tmap)
-  library(wesanderson)
-  library(ggsci)
+  # library(wesanderson)
 }
 
 
@@ -18,13 +18,20 @@ tmap_mode("plot")
 
 tmap_options(fontfamily = "Source Sans Pro",
              output.format = "tiff",
-             output.size = 70)
+             output.size = 98)
+
+
+# my_pal <- ggsci::pal_futurama()
+my_pal <- ggsci::pal_d3("category20")
+
+
+heatmap_data <- readr::read_csv(here("data/eng_msoa_data_202101.csv"))
 
 
 # get some data to start from ---------------------------------------------
 
 
-essex_lads <- jogger::geo_get("lad", "Essex", "cty", return_style = "minimal", spatial_ref = 27700)
+essex_lads <- jogger::geo_get("lad", "Essex", "cty", return_style = "minimal", spatial_ref = 7405)
 save_it(essex_lads)
 
 # essex_lads <- readRDS(here::here("rds_data", "essex_lads.Rds"))
@@ -32,7 +39,7 @@ save_it(essex_lads)
 
 essex_bounds <- essex_lads %>%
   dplyr::pull(lad20nm) %>%
-  purrr::map_df(~ geo_get("msoa", ., "lad", shape_fields = TRUE, spatial_ref = 27700)) %>%
+  purrr::map_df(~ geo_get("msoa", ., "lad", shape_fields = TRUE, spatial_ref = 7405)) %>%
   dplyr::relocate(c(shape_area, shape_length), .before = last_col())
 save_it(essex_bounds)
 
@@ -47,7 +54,7 @@ tmap_save(essex1, "essex1.png")
 
 # instead of using sf::st_centroid to calculate geometric centroids,
 # use ONS population-weighted centroids:
-essex_centroids <- jogger::geo_get("msoa", "Essex", "cty", return_centroids = TRUE, return_style = "minimal", spatial_ref = 27700)
+essex_centroids <- jogger::geo_get("msoa", "Essex", "cty", return_centroids = TRUE, return_style = "minimal", spatial_ref = 7405)
 
 # the above doesn't include LAD columns, so use a join to add these in:
 essex_centroids <- essex_bounds %>%

@@ -4,13 +4,13 @@
   library(here)
   library(dplyr)
   library(extrafont)
-  library(jogger)
+  library(ggsci)
+  library(jogger)   # remotes::install_github("francisbarton/jogger")
   library(myrmidon) # remotes::install_github("francisbarton/myrmidon")
   library(purrr)
   library(sf)
   library(tmap)
   # library(wesanderson)
-  library(ggsci)
 }
 
 
@@ -88,7 +88,7 @@ tmap_save(sw_msoas_heatmap, "sw_msoas_heatmap.png")
 
 # try this way instead:
 sw_msoa_centroids <- sw_msoas %>%
-  pull(msoa11cd) %>%
+  dplyr::pull(msoa11cd) %>%
   jogger::geo_get_bounds(
     bounds_query_level = "msoa",
     area_codes = .,

@@ -25,19 +25,6 @@ london_msoas_heatmap <- heatmap_data %>%
   tm_borders("grey66", lwd = 1) +
   tm_fill("risk_decile", palette = "viridis")
 
-essex_bounds <- readRDS(here::here("rds_data", "essex_bounds.Rds"))
-
-essex_msoas_heatmap <- heatmap_data %>%
-  dplyr::filter(utla20nm == "Essex") %>%
-  dplyr::select(c(msoa11cd, last_col())) %>%
-  dplyr::rename(risk_decile = 2) %>%
-  dplyr::mutate(across(2, as.factor)) %>%
-  dplyr::left_join(essex_bounds, .) %>%
-  tmap::tm_shape() +
-  tm_borders("grey66", lwd = 1) +
-  tm_fill("risk_decile", palette = "viridis")
-
-essex_msoas_heatmap
 
 london_msoas_heatmap
 tmap_save(london_msoas_heatmap, "london_msoas_heatmap.png")

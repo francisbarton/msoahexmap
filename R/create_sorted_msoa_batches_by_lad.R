@@ -1,3 +1,11 @@
+#' Create sorted MSOA batches
+#'
+#' Uses helper functions sort_by_init_proximity() and sort_lads_list_by_density()
+#' to create the grouped and sorted MSOA lists ready for the hex calculation process
+#'
+#' @param msoa_centroids sf tibble of MSOA centroids
+#' @param lad_centroids sf tibble of LAD centroids
+#' @param msoas_list_orig sf tibble of MSOAs (with boundary geometries)
 create_sorted_msoa_batches_by_lad <- function(msoa_centroids, lad_centroids, msoas_list_orig) {
 
   source(here("R/proximity_helper_functions.R"))
@@ -24,7 +32,7 @@ create_sorted_msoa_batches_by_lad <- function(msoa_centroids, lad_centroids, mso
     # and then sort each df by proximity of the MSOAs
     purrr::map(~ arrange(., lad_ctr_proximity)) %>%
 
-    # use sort_by_init_proximity() to
+    # use sort_by_init_proximity() to sort each df by proxim. to initial MSOA
     purrr::map(sort_by_init_proximity) %>%
 
     # return:
