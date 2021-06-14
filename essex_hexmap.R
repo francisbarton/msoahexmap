@@ -1,22 +1,7 @@
 
-# libraries ---------------------------------------------------------------
-{
-  library(here)
-  library(dplyr)
-  library(extrafont)
-  library(ggsci)
-  library(jogger)   # remotes::install_github("francisbarton/jogger")
-  library(myrmidon) # remotes::install_github("francisbarton/myrmidon")
-  library(purrr)
-  library(sf)
-  library(tmap)
-  # library(wesanderson)
-}
+tmap::tmap_mode("plot")
 
-
-tmap_mode("plot")
-
-tmap_options(fontfamily = "Source Sans Pro",
+tmap::tmap_options(fontfamily = "Source Sans Pro",
              output.format = "tiff",
              output.size = 98)
 
@@ -32,7 +17,7 @@ heatmap_data <- readr::read_csv(here("data/eng_msoa_data_202101.csv"))
 
 
 essex_lads <- jogger::geo_get("lad", "Essex", "cty", return_style = "minimal", spatial_ref = 7405)
-save_it(essex_lads)
+myrmidon::save_it(essex_lads)
 
 # essex_lads <- readRDS(here::here("rds_data", "essex_lads.Rds"))
 
@@ -41,15 +26,15 @@ essex_bounds <- essex_lads %>%
   dplyr::pull(lad20nm) %>%
   purrr::map_df(~ geo_get("msoa", ., "lad", shape_fields = TRUE, spatial_ref = 7405)) %>%
   dplyr::relocate(c(shape_area, shape_length), .before = last_col())
-save_it(essex_bounds)
+myrmidon::save_it(essex_bounds)
 
 # essex_bounds <- readRDS(here::here("rds_data", "essex_bounds.Rds"))
 
 
-essex1 <- tm_shape(essex_bounds) +
-  tm_borders("grey33", lwd = 2)
+essex1 <- tmap::tm_shape(essex_bounds) +
+  tmap::tm_borders("grey33", lwd = 2)
 essex1
-tmap_save(essex1, "essex1.png")
+tmap::tmap_save(essex1, "essex1.png")
 
 
 # instead of using sf::st_centroid to calculate geometric centroids,
@@ -88,44 +73,44 @@ essex_grid <- sf::st_make_grid(
 essex_grid_centroids <- sf::st_centroid(essex_grid)
 
 
-essex_grid1 <- tm_shape(essex_bounds) +
-  tm_borders("grey33", lwd = 2) +
-  tm_shape(essex_grid) +
-  tm_borders("green", lwd = 1) +
-  tm_shape(essex_centroids) +
-  tm_dots(col = "orange", size = 0.1)
+essex_grid1 <- tmap::tm_shape(essex_bounds) +
+  tmap::tm_borders("grey33", lwd = 2) +
+  tmap::tm_shape(essex_grid) +
+  tmap::tm_borders("green", lwd = 1) +
+  tmap::tm_shape(essex_centroids) +
+  tmap::tm_dots(col = "orange", size = 0.1)
 essex_grid1
-tmap_save(essex_grid1, "essex_grid1.png")
+tmap::tmap_save(essex_grid1, "essex_grid1.png")
 
 
-essex_grid2 <- tm_shape(essex_grid) +
-  tm_borders("olivedrab4", lwd = 2, alpha = 0.5) +
-  tm_fill("grey85", alpha = 0.3) +
-  tm_shape(essex_lads) +
-  tm_borders("grey45", lwd = 2) +
-  tm_fill("lad20nm", alpha = 0.8, palette = my_pal(13)) +
+essex_grid2 <- tmap::tm_shape(essex_grid) +
+  tmap::tm_borders("olivedrab4", lwd = 2, alpha = 0.5) +
+  tmap::tm_fill("grey85", alpha = 0.3) +
+  tmap::tm_shape(essex_lads) +
+  tmap::tm_borders("grey45", lwd = 2) +
+  tmap::tm_fill("lad20nm", alpha = 0.8, palette = my_pal(13)) +
   # tm_shape(essex_bounds) +
   # tm_borders("grey75", lwd = 1) +
-  tm_shape(essex_centroids) +
-  tm_dots(col = "white", size = 0.2) +
-  tm_shape(essex_centroids) +
-  tm_dots(col = "tomato2", size = 0.1) +
-  tm_layout(legend.outside = TRUE)
+  tmap::tm_shape(essex_centroids) +
+  tmap::tm_dots(col = "white", size = 0.2) +
+  tmap::tm_shape(essex_centroids) +
+  tmap::tm_dots(col = "tomato2", size = 0.1) +
+  tmap::tm_layout(legend.outside = TRUE)
 essex_grid2
-tmap_save(essex_grid2, "essex_grid2.png")
+tmap::tmap_save(essex_grid2, "essex_grid2.png")
 
 
-essex_grid3 <- tm_shape(essex_bounds) +
-  tm_borders("grey75", lwd = 1) +
-  tm_shape(essex_lads) +
-  tm_borders("grey45", lwd = 2) +
-  tm_shape(essex_centroids) +
-  tm_dots(col = "orange", size = 0.1) +
-  tm_shape(purrr::map_dfr(essex_lad_centroids, sf::st_sf)) +
-  tm_dots(col = "firebrick", size = 0.2)
+essex_grid3 <- tmap::tm_shape(essex_bounds) +
+  tmap::tm_borders("grey75", lwd = 1) +
+  tmap::tm_shape(essex_lads) +
+  tmap::tm_borders("grey45", lwd = 2) +
+  tmap::tm_shape(essex_centroids) +
+  tmap::tm_dots(col = "orange", size = 0.1) +
+  tmap::tm_shape(purrr::map_dfr(essex_lad_centroids, sf::st_sf)) +
+  tmap::tm_dots(col = "firebrick", size = 0.2)
 
 essex_grid3
-tmap_save(essex_grid3, "essex_grid3.png")
+tmap::tmap_save(essex_grid3, "essex_grid3.png")
 
 
 
@@ -175,26 +160,26 @@ essex_msoas_by_proximity <- essex_lads_by_centroid_proximity %>%
 # Use the "density" of MSOAs in each LAD as the way to order the hexing process.
 # Density here is total LAD area divided by number of MSOAs in that LAD
 essex_lads_by_density <- essex_bounds %>%
-  st_drop_geometry() %>%
-  group_by(lad20nm) %>%
-  summarise(density = sum(shape_area)/n()) %>%
-  ungroup() %>%
+  sf::st_drop_geometry() %>%
+  dplyr::group_by(lad20nm) %>%
+  dplyr::summarise(density = sum(shape_area)/n()) %>%
+  dplyr::ungroup() %>%
   # order LADs according to density...
-  arrange(density) %>%
-  pull(lad20nm) %>%
+  dplyr::arrange(density) %>%
+  dplyr::pull(lad20nm) %>%
   # and then re-order this list accordingly
   `[`(essex_msoas_by_proximity, .)
 
 
 
 
-my_pal <- ggsci::pal_futurama()
+# my_pal <- ggsci::pal_futurama()
 my_pal <- ggsci::pal_d3("category20")
 
 essex_hexmap <- create_hexmap(essex_bounds, essex_lads_by_density, 4333)
 essex_hexmap
 
-tmap_save(essex_hexmap, "essex_hexmap_4333.tiff")
+tmap::tmap_save(essex_hexmap, "essex_hexmap_4333.tiff")
 
 
 
@@ -209,10 +194,10 @@ create_hexmap <- function(msoa_bounds, lads_list, cell_size) {
 
   grid_fill <- create_hexgrid(msoa_bounds, lads_list, cell_size)
 
-  tm_shape(grid_fill[[1]]) + # base grid
-    tm_borders("olivedrab4", lwd = 1, alpha = 0.1) +
-    tm_fill("grey65", alpha = 0.3) +
-    tm_shape(grid_fill[[2]] %>% # MSOA hexes
+  tmap::tm_shape(grid_fill[[1]]) + # base grid
+    tmap::tm_borders("olivedrab4", lwd = 1, alpha = 0.1) +
+    tmap::tm_fill("grey65", alpha = 0.3) +
+    tmap::tm_shape(grid_fill[[2]] %>% # MSOA hexes
                dplyr::mutate(
                  label = toupper(
                    paste0(
@@ -225,12 +210,12 @@ create_hexmap <- function(msoa_bounds, lads_list, cell_size) {
                  )
                )
     ) +
-    tm_borders() +
-    tm_fill("lad20nm", alpha = 0.7, palette = my_pal(12)) +
-    tm_text("label", size = 0.5) +
-    tm_shape(sf::st_union(msoa_bounds)) + # county boundary
-    tm_borders("gold1", lwd = 2) +
-    tm_layout(title = paste0(
+    tmap::tm_borders() +
+    tmap::tm_fill("lad20nm", alpha = 0.7, palette = ggsci::my_pal(12)) +
+    tmap::tm_text("label", size = 0.5) +
+    tmap::tm_shape(sf::st_union(msoa_bounds)) + # county boundary
+    tmap::tm_borders("gold1", lwd = 2) +
+    tmap::tm_layout(title = paste0(
       "Cell size = "
       , cell_size
       , "m\nMSOAs in Essex: "

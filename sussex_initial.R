@@ -1,17 +1,4 @@
 
-# libraries ---------------------------------------------------------------
-{
-  library(here)
-  library(dplyr)
-  library(jogger)
-  library(purrr)
-  library(sf)
-  library(tmap)
-  library(wesanderson)
-  library(ggsci)
-}
-
-
 tmap_mode("plot")
 
 tmap_options()

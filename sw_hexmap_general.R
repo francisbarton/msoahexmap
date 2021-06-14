@@ -1,19 +1,4 @@
 
-# libraries ---------------------------------------------------------------
-{
-  library(here)
-  library(dplyr)
-  library(extrafont)
-  library(ggsci)
-  library(jogger)   # remotes::install_github("francisbarton/jogger")
-  library(myrmidon) # remotes::install_github("francisbarton/myrmidon")
-  library(purrr)
-  library(sf)
-  library(tmap)
-  # library(wesanderson)
-}
-
-
 tmap_mode("plot")
 
 tmap_options(fontfamily = "Source Sans Pro",
