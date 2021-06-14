@@ -5,7 +5,7 @@ Version: 0.1.0
 Author: Fran Barton
 Maintainer: Fran Barton <fbarton@alwaysdata.net>
 Description: The intention is to make a hexagon cartogram framework
-    for MSOAs in England. And maybe then LSOAs if the method works.
+    for MSOAs in England.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

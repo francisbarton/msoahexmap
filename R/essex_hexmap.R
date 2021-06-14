@@ -250,8 +250,7 @@ create_hexgrid <- function(area_bounds, msoas_list, cell_size) {
     square = FALSE,
     flat_topped = TRUE,
     cellsize = cell_size
-  ) %>%
-    sf::st_sfc(crs = 27700)
+  )
 
   # use the hex_array function to create results for each area given the full
   # grid as a starting point...
