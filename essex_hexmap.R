@@ -28,7 +28,7 @@ essex_bounds <- essex_lads %>%
   dplyr::relocate(c(shape_area, shape_length), .before = last_col())
 myrmidon::save_it(essex_bounds)
 
-# essex_bounds <- readRDS(here::here("rds_data", "essex_bounds.Rds"))
+essex_bounds <- readRDS(here::here("rds_data", "essex_bounds.Rds"))
 
 
 essex1 <- tmap::tm_shape(essex_bounds) +
@@ -48,7 +48,7 @@ essex_centroids <- essex_bounds %>%
   dplyr::left_join(essex_centroids, .)
 save_it(essex_centroids)
 
-# essex_centroids <- readRDS(here::here("rds_data", "essex_centroids.Rds"))
+essex_centroids <- readRDS(here::here("rds_data", "essex_centroids.Rds"))
 
 
 # Create a list of MSOAs (with centroid geometry) for each LAD

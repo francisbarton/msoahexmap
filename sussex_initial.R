@@ -136,7 +136,6 @@ tmap_save(sussex5, "sussex5.png")
 # Arrange the list of MSOAs in each LAD according to how close their centroid
 # is to the LAD's centroid. The intention here is to try to centre to some
 # extent each cluster of MSOAs more faithfully over the extent of its LAD
-
 sussex_lads_by_centroid_proximity <- sussex_centroids_split %>%
   purrr::map2(., sussex_lad_centroids, ~ sf::st_distance(.x, .y)) %>%
   purrr::map(as.vector) %>%

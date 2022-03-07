@@ -1,15 +1,14 @@
 Type: Package
 Package: msoahexmap
-Title: Creates Hexagon Cartograms for English MSOAs
-Version: 0.1.0
+Title: A Hexagon Cartogram for MSOAs in England
+Version: 0.1.2
 Author: Fran Barton
 Maintainer: Fran Barton <fbarton@alwaysdata.net>
-Description: The intention is to make a hexagon cartogram framework
-    for MSOAs in England.
+Description: To make a hex-cartogram framework for MSOAs in England.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Depends: R (>= 4.1.0)
 Imports: 
     dplyr,
@@ -17,12 +16,12 @@ Imports:
     here,
     magrittr,
     purrr,
-    sf,
-    tmap
+    sf
 Suggests:
-    extrafont,
-    ggsci,
     myrmidon,
-    stringr
+    stringr,
+    lubridate,
+    usethis,
+    tmap
 URL: https://github.com/francisbarton/msoahexmap
 BugReports: https://github.com/francisbarton/msoahexmap/issues
