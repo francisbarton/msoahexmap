@@ -1,28 +1,29 @@
-Type: Package
 Package: msoahexmap
 Title: Creates Hexagon Cartograms for English MSOAs
 Version: 0.1.0
-Author: Fran Barton
+Authors@R: 
+    person("Fran", "Barton", , "fbarton@alwaysdata.net", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-5650-1176"))
 Maintainer: Fran Barton <fbarton@alwaysdata.net>
 Description: The intention is to make a hexagon cartogram framework
     for MSOAs in England.
 License: MIT + file LICENSE
-Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.1
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
 Depends: R (>= 4.1.0)
 Imports: 
+    boundr,
     dplyr,
-    jogger,
     here,
-    magrittr,
     purrr,
     sf,
+    stringr,
     tmap
 Suggests:
     extrafont,
     ggsci,
-    myrmidon,
-    stringr
+    myrmidon
 URL: https://github.com/francisbarton/msoahexmap
 BugReports: https://github.com/francisbarton/msoahexmap/issues

@@ -2,15 +2,16 @@
 #'
 #' Combines grid creation function and hexgrid creation
 #'
-#' @param area_bounds an sf object (eg sfc collection) that provides the overall shape
-#' @param msoas_list grouped and sorted list of MSOAs by LAD area or whatever
-#' @param cell_size size of grid cells in m
+#' @param area_bounds An `sf` object (eg sfc collection) that provides the
+#'  overall shape
+#' @param msoas_list A grouped list of MSOAs, sorted by LAD area or whatever
+#' @param cell_size numeric. The size of grid cells in metres.
 #'
-#' @return a list with two elements: a grid and a hexgrid
+#' @returns A list with two elements: a base hexgrid and a hexgrid of MSOAs
 #' @export
 create_hexgrid <- function(area_bounds, msoas_list, cell_size) {
 
-  # make a grid of the whole area, given cell_size as a variable
+  # Make a grid of the whole area, given cell_size as a variable
   grid <- sf::st_make_grid(
     area_bounds,
     what = "polygons",
@@ -19,18 +20,18 @@ create_hexgrid <- function(area_bounds, msoas_list, cell_size) {
     cellsize = cell_size
   )
 
-  # use the hex_array function to create results for each area given the full
+  # Use the hex_array function to create results for each area given the full
   # grid as a starting point...
-  # ... this works through each list of MSOAs iteratively and uses `reduce`
+  # This works through each list of MSOAs iteratively and uses `reduce`
   # to produce a neat set of results
-  hexes <- msoas_list %>%
+  hexes <- msoas_list |>
     purrr::reduce(
       hex_array,
       .init = list(NULL, grid)
-    ) %>%
+    ) |>
     purrr::pluck(1)
 
-  # return:
+  # Return
   list(grid, hexes)
 }
 
@@ -38,24 +39,25 @@ create_hexgrid <- function(area_bounds, msoas_list, cell_size) {
 
 #' Hex array: the guts of create_hexgrid()
 #'
-#' @param data_inputs a list created by previous run: previous results and a grid
-#' @param msoas_list grouped and sorted list of MSOAs by LAD area or whatever
+#' @param data_inputs A list created by the previous run: previous results and
+#'  a grid
+#' @inheritParams create_hexgrid
 #'
-#' @return a list: current results and a grid
+#' @returns A list: current results and a grid
 hex_array <- function(data_inputs, msoas_list) {
 
-  # split out data_inputs (data to work with) as the basis for the function
+  # Split out data_inputs (data to work with) as the basis for the function
   prev_results <- data_inputs[[1]]
   grid <- data_inputs[[2]]
 
-  lad_hexes <- msoas_list %>%
-    split( ~ msoa11cd) %>%
+  lad_hexes <- msoas_list |>
+    split( ~ msoa11cd) |>
     purrr::reduce(collect_hexes, .init = list(NULL, grid))
 
-  # add results to stored previous results
+  # Add results to stored previous results
   results <- dplyr::bind_rows(prev_results, lad_hexes[[1]])
 
-  # return results so far and remaining grid:
+  # Return results so far and remaining grid:
   list(results, lad_hexes[[2]])
 
 }
@@ -63,18 +65,18 @@ hex_array <- function(data_inputs, msoas_list) {
 
 #' Collect hexes
 #'
-#' @param data_inputs a list created by previous run: previous results and a grid
-#' @param msoa a particular MSOA whose hex location is to be calculated
+#' @inheritParams hex_array
+#' @param msoa A particular MSOA whose hex location is to be calculated
 #'
 #' @return a list: current results and currently remaining grid
 collect_hexes <- function(data_inputs, msoa) {
 
-  # split out data_inputs (data to work with) as the basis for the function
+  # Split out data_inputs (data to work with) as the basis for the function
   results <- data_inputs[[1]]
   grid <- data_inputs[[2]]
 
-  # if we have any "results" produced already...
-  # ...and at least one of the remaining grid hexes touches the results hexes
+  # If we have any "results" produced already...
+  # and at least one of the remaining grid hexes touches the results hexes:
   if (!is.null(results) && any(
     sf::st_touches(
       x = sf::st_union(results),
@@ -82,17 +84,17 @@ collect_hexes <- function(data_inputs, msoa) {
       sparse = FALSE)[1, ]
   )) {
 
-    # pull out a group of hexes from "grid" that touch "results"...
-    touching_grid <- grid %>%
+    # ... then pull out a group of hexes from "grid" that touch "results"...
+    touching_grid <- grid |>
       `[`(which(sf::st_touches(x = sf::st_union(results), y = grid, sparse = FALSE)[1, ]))
 
-    touching_centroids <- touching_grid %>%
+    touching_centroids <- touching_grid |>
       sf::st_centroid()
 
     nearest_index <- sf::st_nearest_feature(msoa, touching_centroids)
     nearest_hex <- sf::st_set_geometry(msoa, `[`(touching_grid, nearest_index))
 
-    # if this is the first loop, or there's no touching hexes available:
+    # Or, if this is the first loop or there's no touching hexes available:
   } else {
     grid_centroids <- sf::st_centroid(grid)
     nearest_index <- sf::st_nearest_feature(msoa, grid_centroids)
@@ -100,13 +102,13 @@ collect_hexes <- function(data_inputs, msoa) {
   }
 
 
-  # add the chosen hex to "results"
+  # Add the chosen hex to "results"...
   results <- dplyr::bind_rows(results, nearest_hex)
 
-  # and subtract it from the grid
+  # ...and subtract it from the grid
   grid_out <- sf::st_difference(grid, nearest_hex)
 
-  # return
+  # Return
   list(results, grid_out)
 
 }
