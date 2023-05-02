@@ -7,7 +7,7 @@
 get_current_region <- function(regions_list, n) {
   regions_list |>
     dplyr::slice(n) |>
-    dplyr::pull(rgn20nm)
+    dplyr::pull(all_of("rgn22nm"))
 }
 
 
@@ -17,7 +17,25 @@ get_current_region <- function(regions_list, n) {
 #'
 #' @returns `sf` tibble of all LADs in a region, with boundaries
 get_regional_lads <- function(region) {
-  jogger::geo_get("lad", region, "rgn", return_style = "minimal", spatial_ref = 7405)
+  boundr::bounds(
+    "lad", "rgn", region,
+    return_width = "tidy",
+    resolution = "BGC",
+    crs = 27700)
+}
+
+get_all_region_lads <- function(eng_regions) {
+  region_names <- eng_regions |>
+      dplyr::pull(all_of("rgn22nm"))
+  region_names |>
+    purrr::map(get_regional_lads, .progress = TRUE) |>
+    rlang::set_names(region_names)
+}
+
+get_all_lad_centroids <- function(lads_by_region) {
+  lads_by_region |>
+    purrr::map(sf::st_centroid) |>
+    purrr::set_names(names(lads_by_region))
 }
 
 
@@ -28,9 +46,32 @@ get_regional_lads <- function(region) {
 #' @returns `sf` tibble of MSOAs with boundaries
 get_msoas <- function(lads_list) {
   lads_list |>
-    dplyr::pull(lad20nm) |>
-    purrr::map_df(~ geo_get("msoa", ., "lad", shape_fields = TRUE, spatial_ref = 7405)) |>
-    dplyr::relocate(c(shape_area, shape_length), .before = last_col())
+    dplyr::pull(all_of("lad22cd")) |>
+    purrr::map(
+      \(x) boundr::bounds(
+        "msoa", "lad", within_codes = x,
+        return_width = "full",
+        lookup_year = "2021",
+        within_year = "2022",
+        country_filter = "EW",
+        resolution = "BGC",
+        option = 4,
+        crs = 27700),
+      .progress = TRUE
+      ) |>
+    purrr::list_rbind() |>
+    janitor::clean_names() |>
+    dplyr::relocate(
+      any_of(c("shape_area", "shape_length")),
+      .before = last_col())
+}
+
+get_msoas_by_region <- function(lads_by_region, eng_regions) {
+  region_names <- eng_regions |>
+      dplyr::pull(all_of("rgn22nm"))
+  lads_by_region |>
+    purrr::map(get_msoas, .progress = TRUE) |>
+    rlang::set_names(region_names)
 }
 
 
@@ -39,8 +80,64 @@ get_msoas <- function(lads_list) {
 #' @param region name of region
 #'
 #' @return sf tibble of MSOAs in a region with centroid geometries
-get_msoa_centroids <- function(region) {
-  jogger::geo_get("msoa", region, "rgn", return_centroids = TRUE, return_style = "minimal", spatial_ref = 7405)
+get_msoa_centroids <- function(lad_code) {
+  boundr::bounds(
+    "msoa", "lad",
+    within_codes = lad_code,
+    return_width = "tidy",
+    lookup_year = "2021",
+    within_year = "2022",
+    country_filter = "EW",
+    option = 4,
+    centroids = TRUE,
+    crs = 27700)
+}
+
+get_msoa_centroids_by_rgn <- function(lads_by_region, eng_regions) {
+  region_names <- eng_regions |>
+      dplyr::pull(all_of("rgn22nm"))
+  lads_by_region |>
+    purrr::map(get_msoa_centroids_by_lad, .progress = TRUE) |>
+    rlang::set_names(region_names)
+}
+
+
+get_msoa_centroids_by_lad <- function(lads_df) {
+  lad_codes <- lads_df |>
+    dplyr::pull(all_of("lad22cd"))
+  lad_codes |>
+    purrr::map(get_msoa_centroids) |>
+    purrr::list_rbind() |>
+    sf::st_sf()
+}
+
+sort_msoas_by_proximity <- function(
+  msoa_centroids_by_region,
+  eng_lad_centroids,
+  msoas_by_region) {
+  
+  list(
+    msoa_centroids_by_region,
+    eng_lad_centroids,
+    msoas_by_region
+  ) |>
+  purrr::pmap(create_sorted_msoa_batches) |>
+  rlang::set_names(names(msoas_by_region))
+}
+
+# make a grid of the whole country, given `cell_size` as a variable.
+create_base_grid <- function(eng_regions, cell_size) {
+  england <- sf::st_union(eng_regions)
+  sf::st_make_grid(
+    # 15826 hexes
+    england,
+    what = "polygons",
+    square = FALSE,
+    flat_topped = TRUE,
+    cellsize = cell_size
+  ) |>
+    purrr::keep(
+      \(x) as.vector(sf::st_intersects(x, england, sparse = FALSE)))
 }
 
 

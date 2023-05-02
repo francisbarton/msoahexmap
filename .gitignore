@@ -6,3 +6,4 @@ rds_data
 *.png
 *.tiff
 *.csv
+.vscode/settings.json

@@ -51,7 +51,7 @@ hex_array <- function(data_inputs, msoas_list) {
   grid <- data_inputs[[2]]
 
   lad_hexes <- msoas_list |>
-    split( ~ msoa11cd) |>
+    split( ~ msoa21cd) |>
     purrr::reduce(collect_hexes, .init = list(NULL, grid))
 
   # Add results to stored previous results
@@ -77,7 +77,7 @@ collect_hexes <- function(data_inputs, msoa) {
 
   # If we have any "results" produced already...
   # and at least one of the remaining grid hexes touches the results hexes:
-  if (!is.null(results) && any(
+  if (!is.null(results) & any(
     sf::st_touches(
       x = sf::st_union(results),
       y = grid,
@@ -86,19 +86,23 @@ collect_hexes <- function(data_inputs, msoa) {
 
     # ... then pull out a group of hexes from "grid" that touch "results"...
     touching_grid <- grid |>
-      `[`(which(sf::st_touches(x = sf::st_union(results), y = grid, sparse = FALSE)[1, ]))
+      purrr::keep(
+        sf::st_touches(
+          x = sf::st_union(results),
+          y = grid,
+          sparse = FALSE)[1, ])
 
     touching_centroids <- touching_grid |>
       sf::st_centroid()
 
     nearest_index <- sf::st_nearest_feature(msoa, touching_centroids)
-    nearest_hex <- sf::st_set_geometry(msoa, `[`(touching_grid, nearest_index))
+    nearest_hex <- sf::st_set_geometry(msoa, touching_grid[nearest_index])
 
     # Or, if this is the first loop or there's no touching hexes available:
   } else {
     grid_centroids <- sf::st_centroid(grid)
     nearest_index <- sf::st_nearest_feature(msoa, grid_centroids)
-    nearest_hex <- sf::st_set_geometry(msoa, `[`(grid, nearest_index))
+    nearest_hex <- sf::st_set_geometry(msoa, grid[nearest_index])
   }
 
 
@@ -110,5 +114,4 @@ collect_hexes <- function(data_inputs, msoa) {
 
   # Return
   list(results, grid_out)
-
 }

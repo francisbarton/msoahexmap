@@ -1,6 +1,7 @@
 #' Make a regional grid
 #'
-#' @param area An `sf` object (eg sfc collection) that provides the overall shape
+#' @param area An `sf` object (eg sfc collection) that provides the overall
+#'  shape
 #' @param cell_size numeric. The size of grid cells in metres.
 #'
 #' @returns An `sf` grid object
