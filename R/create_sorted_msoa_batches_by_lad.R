@@ -41,7 +41,7 @@ create_sorted_msoa_batches <- function(
       # \(x, y) dplyr::bind_cols(y, lad_ctr_proximity = x)) |>
 
     # Sort each df by proximity of the MSOA centroids to the LAD centroid
-    purrr::map(\(x) dplyr::arrange(x, across("lad_ctr_proximity"))) |>
+    purrr::map(\(x) dplyr::arrange(x, "lad_ctr_proximity")) |>
 
     # Use `sort_by_init_proximity()` to sort each df by proxim. to initial MSOA
     purrr::map(sort_by_init_proximity) |>
@@ -70,7 +70,7 @@ sort_lads_list_by_density <- function(
     dplyr::summarise(across("shape_area", mean), .by = "lad22nm") |>
     dplyr::rename(density = "shape_area") |>
     # order LADs according to density...
-    dplyr::arrange(across("density")) |>
+    dplyr::arrange("density") |>
     dplyr::pull(all_of("lad22nm"))
 
   # Return the LSOAs list ordered by LAD density
@@ -89,11 +89,11 @@ sort_by_init_proximity <- function(dtf) {
 
   all_geometries <- dtf |>
     dplyr::pull(all_of("geometry"))
-  
+
   distances_to_top <- sf::st_distance(all_geometries, top)
 
   dtf |>
     dplyr::mutate(top_proximity = distances_to_top) |>
     # dplyr::mutate(across(top_proximity, units::drop_units)) |>
-    dplyr::arrange(across("top_proximity"))
+    dplyr::arrange("top_proximity")
 }
