@@ -1,6 +1,6 @@
 Package: msoahexmap
 Title: Creates Hexagon Cartograms for English MSOAs
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: 
     person("Fran", "Barton", , "fbarton@alwaysdata.net", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-5650-1176"))
@@ -24,6 +24,7 @@ Imports:
 Suggests:
     extrafont,
     ggsci,
-    myrmidon
+    myrmidon,
+    targets
 URL: https://github.com/francisbarton/msoahexmap
 BugReports: https://github.com/francisbarton/msoahexmap/issues
