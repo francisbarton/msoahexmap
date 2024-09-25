@@ -1,0 +1,126 @@
+---
+title: "working out the algorithm"
+vignette: >
+  %\VignetteIndexEntry{algorithm}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(msoahexmap)
+```
+
+## The intention
+
+The intention is to make the best hexmap of the MSOAs in England (and Wales
+  maybe) that I can.
+
+I'm hoping I can learn something about working with spatial functions and
+  designing a complex algorithm to achieve what I want.
+
+I want the process to be as automated as possible, for two reasons:
+* I want it to be reproducible and relatively easy to improve iteratively
+* I want to have the core of an algorithm that is portable to other situations
+  and projects. If there is too much manual intervention required to get the map
+  right, the process isn't really portable or generalisable.
+
+## The problem part 1
+
+There are lots of different ways you could try to do this.
+
+One attempt that was very popular on twitter during the Covid-19 years was
+  developed by Carl Baker and colleagues at the House of Commons Library.
+
+
+## The problem part 2: London
+
+Yeah, London. That London.
+
+You're a problem. A big problem.
+
+We'll deal with you later.
+
+
+
+
+
+
+## London
+
+You know earlier I said I would deal with London later?
+
+That was mainly for simplicity in following some kind of logical order in
+  writing this.
+  But in truth I had actually dealt with London first.
+
+The problem is population density.
+
+If you make your hexagons small enough to fit all 931 of London's into
+  the actual geographical shape and size of London on your grid, most of the
+  rest of England (let alone Wales) has hexes so sparse that they look
+  ridiculously out of proportion in the vast rural swathes of much of
+  England.
+  There are exceptions of course, areas of relatively high density in the
+  regional cities.
+  But it's only the North West that comes anywhere close to having the kind of
+  population density, in the Manchester-Liverpool metropolitan region, that
+  London does.
+
+And the North West still has Cumbria to even things out.
+  Needless to say, Bromley and Havering - don't even think about it: you aren't
+  going to compete with the Lake District.
+
+So what to do with London?
+
+My solution is simple: throw it in the North Sea.
+
+
+### Processing London
+
+In order to get all of London's MSOAs represented as well as possible within
+  its actual shape, so that we can give the rest of the country hexes as big as
+  possible, I actually had to be quite interventionist about what went where,
+  and in what order the districts of London got allocated their hexes.
+  I took the liberty however of removing certain hexes from the grid to
+  represent the lower Thames, the lower Lea, and Richmond Park, and some other
+  bits around the fringes of the city.
+
+My original work on London used a hex size just small enough to fit everything
+  in and to allow for the bits of shaping just mentioned.
+  But otherwise it was as big as possible.
+
+London original hexagon size: xxxx
+
+But still smaller than we would ideally like to use for the rest of the country.
+So, leaving London aside, I moved onto the next densest region in England: the
+  North West.
+  Again using the largest possible hex size that allowed me to fit everything
+  into the actual shape and size of the region without areas being wildly out
+  of place or distorted, I began processing the North West.
+  Again this was quite interventionist.
+  But once this region is done, the other regions should fall into place
+  relatively easily, with their generally lower densities.
+  (West and South Yorkshire were also a bit of a challenge, mainly because they
+  adjoin much of the North West region so there is not much scope for moving
+  them around.)
+
+### Hex size: it's all about compromise
+
+
+## Attempt 1
+
+It's a little sad to say that I originally started working on this in about
+  2021, made some good progress but never finished it off, then came back to it
+  intermittently through 2022 but it's now August 2024 and this still hasn't got
+  finished off.
+
+I have been tinkering.
+
+My first attempts were region-based. 
