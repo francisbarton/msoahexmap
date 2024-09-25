@@ -2,8 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
-rds_data
 *.png
 *.tiff
 *.csv
+*.Rds
 .vscode/settings.json
+inst/doc
