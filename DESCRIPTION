@@ -1,9 +1,13 @@
 Package: msoahexmap
 Title: Creates Hexagon Cartograms for English MSOAs
-Version: 0.1.1
-Authors@R: 
-    person("Fran", "Barton", , "fbarton@alwaysdata.net", role = c("aut", "cre"),
-           comment = c(ORCID = "0000-0002-5650-1176"))
+Version: 0.1.2
+Authors@R:
+    person(
+        "Fran", "Barton",
+        email = "fbarton@alwaysdata.net",
+        role = c("aut", "cre"),
+        comment = c(ORCID = "0000-0002-5650-1176")
+    )
 Maintainer: Fran Barton <fbarton@alwaysdata.net>
 Description: The intention is to make a hexagon cartogram framework
     for MSOAs in England.
@@ -13,18 +17,24 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
 Depends: R (>= 4.1.0)
-Imports: 
+Imports:
+    assertthat,
     boundr,
     dplyr,
     here,
     purrr,
+    RcppHungarian,
     sf,
     stringr,
+    tidyr,
     tmap
 Suggests:
     extrafont,
+    ggplot2,
     ggsci,
-    myrmidon,
-    targets
+    targets,
+    testthat (>= 3.0.0)
 URL: https://github.com/francisbarton/msoahexmap
 BugReports: https://github.com/francisbarton/msoahexmap/issues
+VignetteBuilder: quarto
+Config/testthat/edition: 3
