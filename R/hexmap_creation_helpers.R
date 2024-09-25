@@ -81,16 +81,19 @@ collect_hexes <- function(data_inputs, msoa) {
     sf::st_touches(
       x = sf::st_union(results),
       y = grid,
-      sparse = FALSE)[1, ]
+      sparse = FALSE
+    )[1, ]
   )) {
 
     # ... then pull out a group of hexes from "grid" that touch "results"...
     touching_grid <- grid |>
-      purrr::keep(
+      purrr::keep({
         sf::st_touches(
           x = sf::st_union(results),
           y = grid,
-          sparse = FALSE)[1, ])
+          sparse = FALSE
+        )[1, ]
+      })
 
     touching_centroids <- touching_grid |>
       sf::st_centroid()
